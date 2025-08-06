@@ -1,2 +1,4 @@
 VectorShift - Integrations Technical Assessment Instructions
 venv/
+__pycache__/
+.env
