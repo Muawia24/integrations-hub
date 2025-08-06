@@ -9,7 +9,7 @@ import httpx
 import asyncio
 import base64
 import hashlib
-
+import urllib
 import requests
 import os
 from integrations.integration_item import IntegrationItem
