@@ -51,7 +51,7 @@ async def oauth2callback_notion(request: Request):
         response, _ = await asyncio.gather(
             client.post(
                 'https://api.notion.com/v1/oauth/token',
-                json={
+                data={
                     'grant_type': 'authorization_code',
                     'code': code,
                     'redirect_uri': REDIRECT_URI
