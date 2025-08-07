@@ -7,6 +7,7 @@ import urllib
 import json
 import httpx
 import asyncio
+from typing import List
 from integration_item import IntegrationItem
 from redis_client import add_key_value_redis, get_value_redis, delete_key_redis
 
@@ -103,7 +104,7 @@ async def create_integration_item_metadata_object(response_json: str) -> Integra
     created_at = response_json.get("createdAt")
     updated_at = response_json.get("updatedAt")
      
-    return IntegrationItem(
+    integration_item_metadata = IntegrationItem(
         id=contact_id,
         type="hubspot_contact",
         name=full_name,
@@ -112,6 +113,28 @@ async def create_integration_item_metadata_object(response_json: str) -> Integra
         parent_id=None,
     )
 
-async def get_items_hubspot(credentials):
-    # TODO
-    pass
+    return integration_item_metadata
+
+async def get_items_hubspot(credentials) -> List[IntegrationItem] :
+    access_token = credentials.get('access_token')
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Missing access token")
+    headers = {
+        'Authorization': f"Bearer {access_token}",
+        'Content-Type': 'application/json'
+    }
+    url = "https://api.hubapi.com/crm/v3/objects/contacts"
+
+    async with httpx.AsyncClient() as client:
+        response = client.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail="Filed to fetch data")
+    response_data = response.json()
+    items = response_data.get('resulst', [])
+    metadata_objects = []
+    for item in items:
+        metadata_obj = await create_integration_item_metadata_object(item)
+        metadata_objects.append(metadata_obj)
+
+    return metadata_objects
