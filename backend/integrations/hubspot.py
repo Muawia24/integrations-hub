@@ -8,7 +8,7 @@ import json
 import httpx
 import asyncio
 from typing import List
-from integration_item import IntegrationItem
+from integrations.integration_item import IntegrationItem
 from redis_client import add_key_value_redis, get_value_redis, delete_key_redis
 
 CLIENT_ID = os.getenv("HUBSPOT_CLIENTID")
@@ -55,11 +55,12 @@ async def oauth2callback_hubspot(request: Request):
                 'https://api.hubapi.com/oauth/v1/token',
                 data={
                     'grant_type': 'authorization_code',
+                    'client_id': CLIENT_ID,
+                    'client_secret': SECRET_ID,
                     'code': code,
                     'redirect_uri': REDIRECT_URI
                 },
                 headers={
-                    'Authorization': f'Basic {encoded_client_id_secret}',
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
             ),
@@ -81,9 +82,11 @@ async def get_hubspot_credentials(user_id, org_id):
     credentials = await get_value_redis(f'hubspot_credentials:{org_id}:{user_id}')
     if not credentials:
         raise HTTPException(status_code=400, detail='No credentials found.')
-    credentials = json.loads(credentials)
-    if not credentials:
-        raise HTTPException(status_code=400, detail='No credentials found.')
+    try:
+        credentials = json.loads(credentials)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail='Failed to decode stored credentials.')
+    
     await delete_key_redis(f'hubspot_credentials:{org_id}:{user_id}')
 
     return credentials
@@ -96,9 +99,8 @@ async def create_integration_item_metadata_object(response_json: str) -> Integra
     properties = response_json.get("properties", {})
     contact_id = response_json.get("id")
 
-    first_name = response_json.get("firstname", "")
-    last_name = response_json.get("lastname", "")
-    email = response_json.get("email", "")
+    first_name = properties.get("firstname", "")
+    last_name = properties.get("lastname", "")
 
     full_name = f"{first_name} {last_name}".strip()
     created_at = response_json.get("createdAt")
@@ -116,6 +118,7 @@ async def create_integration_item_metadata_object(response_json: str) -> Integra
     return integration_item_metadata
 
 async def get_items_hubspot(credentials) -> List[IntegrationItem] :
+    credentials = json.loads(credentials)
     access_token = credentials.get('access_token')
     if not access_token:
         raise HTTPException(status_code=401, detail="Missing access token")
@@ -126,12 +129,12 @@ async def get_items_hubspot(credentials) -> List[IntegrationItem] :
     url = "https://api.hubapi.com/crm/v3/objects/contacts"
 
     async with httpx.AsyncClient() as client:
-        response = client.get(url, headers=headers)
+        response = await client.get(url, headers=headers)
 
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail="Filed to fetch data")
     response_data = response.json()
-    items = response_data.get('resulst', [])
+    items = response_data.get('results', [])
     metadata_objects = []
     for item in items:
         metadata_obj = await create_integration_item_metadata_object(item)
