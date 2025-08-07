@@ -1,5 +1,3 @@
-# hubspot.py
-
 from fastapi import Request, HTTPException
 from fastapi.responses import HTMLResponse
 import secrets
@@ -9,6 +7,7 @@ import urllib
 import json
 import httpx
 import asyncio
+from integration_item import IntegrationItem
 from redis_client import add_key_value_redis, get_value_redis, delete_key_redis
 
 CLIENT_ID = os.getenv("HUBSPOT_CLIENTID")
@@ -23,7 +22,7 @@ scopes = urllib.parse.quote("oauth crm.objects.contacts.read")
 
 async def authorize_hubspot(user_id, org_id):
     state_data = {
-        'state': secrets.urlsafe(32),
+        'state': secrets.token_urlsafe(32),
         'user_id': user_id,
         'org_id': org_id
     }
@@ -56,11 +55,11 @@ async def oauth2callback_hubspot(request: Request):
                 data={
                     'grant_type': 'authorization_code',
                     'code': code,
-                    'redirecr_uri': REDIRECT_URI
+                    'redirect_uri': REDIRECT_URI
                 },
                 headers={
                     'Authorization': f'Basic {encoded_client_id_secret}',
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
             ),
             delete_key_redis(f'hubspot_state:{org_id}:{user_id}'),
@@ -88,9 +87,30 @@ async def get_hubspot_credentials(user_id, org_id):
 
     return credentials
 
-async def create_integration_item_metadata_object(response_json):
-    # TODO
-    pass
+async def create_integration_item_metadata_object(response_json: str) -> IntegrationItem:
+    """
+    Converts a HubSpot contact JSON into an IntegrationItem.
+    Matches fields seen in the UI: Name, Email, Job Title, Created, Modified.
+    """
+    properties = response_json.get("properties", {})
+    contact_id = response_json.get("id")
+
+    first_name = response_json.get("firstname", "")
+    last_name = response_json.get("lastname", "")
+    email = response_json.get("email", "")
+
+    full_name = f"{first_name} {last_name}".strip()
+    created_at = response_json.get("createdAt")
+    updated_at = response_json.get("updatedAt")
+     
+    return IntegrationItem(
+        id=contact_id,
+        type="hubspot_contact",
+        name=full_name,
+        creation_time=created_at,
+        last_modified_time=updated_at,
+        parent_id=None,
+    )
 
 async def get_items_hubspot(credentials):
     # TODO
