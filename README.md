@@ -33,7 +33,7 @@ This project implements integrations for **HubSpot**, **Notion**, and **Airtable
 ```bash
 git clone https://github.com/Muawia24/integrations-hub.git
 cd integrations-hub
-
+```
 ---
 
 ### 🔧 2. Backend Setup (FastAPI)
@@ -46,13 +46,17 @@ pip install -r requirements.txt
 
 Start the backend:
 uvicorn main:app --reload
+```
 
 ---
 
 ### 🔧 3. Frontend Setup (React)
+
+```bash
 cd frontend
 npm i
 npm run start  # or `npm run dev` if using Vite
+```
 
 > The frontend allows you to test integration flows:  
 > Authenticate, store credentials, and trigger data loading.
