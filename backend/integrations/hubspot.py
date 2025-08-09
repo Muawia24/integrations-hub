@@ -33,7 +33,6 @@ CONTACTS_URL = "https://api.hubapi.com/crm/v3/objects/contacts"
 encoded_client_id_secret = base64.b64encode(f'{CLIENT_ID}:{SECRET_ID}'.encode()).decode()
 
 
-
 async def authorize_hubspot(user_id: str, org_id: str) -> str:
     """Generates the HubSpot OAuth2 authorization URL with a signed state."""
     state_data = {
@@ -42,11 +41,14 @@ async def authorize_hubspot(user_id: str, org_id: str) -> str:
         'org_id': org_id
     }
 
-    encoded_state = json.dumps(state_data)
+    state_json = json.dumps(state_data)
+    encoded_state = urllib.parse.quote(state_json)
+
     redis_key = f'hubspot_state:{org_id}:{user_id}'
-    await add_key_value_redis(redis_key, encoded_state, expire=600)
+    await add_key_value_redis(redis_key, state_json, expire=600)
 
     return f'{AUTHORIZATION_URL}&state={encoded_state}'
+
 
 async def oauth2callback_hubspot(request: Request) -> HTMLResponse:
     """Handles the OAuth2 callback and exchanges the code for tokens."""
@@ -133,8 +135,10 @@ async def create_integration_item_metadata_object(response_json: str) -> Integra
 
     first_name = properties.get("firstname", "")
     last_name = properties.get("lastname", "")
+    email = properties.get("email", "")
 
     full_name = f"{first_name} {last_name}".strip()
+    
     created_at = response_json.get("createdAt")
     updated_at = response_json.get("updatedAt")
      
@@ -142,12 +146,14 @@ async def create_integration_item_metadata_object(response_json: str) -> Integra
         id=contact_id,
         type="hubspot_contact",
         name=full_name,
+        email=email,
         creation_time=created_at,
         last_modified_time=updated_at,
         parent_id=None,
     )
 
     return integration_item_metadata
+
 
 async def get_items_hubspot(credentials: dict) -> List[IntegrationItem] :
     """Fetches HubSpot contacts and converts them to IntegrationItems."""
@@ -169,7 +175,7 @@ async def get_items_hubspot(credentials: dict) -> List[IntegrationItem] :
     response_data = response.json()
     items = response_data.get('results', [])
     metadata_objects = []
-    
+
     for item in items:
         metadata_obj = await create_integration_item_metadata_object(item)
         metadata_objects.append(metadata_obj)
