@@ -17,7 +17,6 @@ export const HubspotIntegration = ({ user, org, integrationParams, setIntegratio
             formData.append('user_id', user);
             formData.append('org_id', org)
             const response = await axios.post(`http://localhost:8000/integrations/hubspot/authorize`, formData);
-            console.log(response);
             const authURL = response?.data;
 
             const newWindow = window.open(authURL,'Hubspot Authorization', 'width=600, height=600');
@@ -76,7 +75,7 @@ export const HubspotIntegration = ({ user, org, integrationParams, setIntegratio
                         opacity: isConnected ? 1 : undefined
                     }}
                 >
-                    {isConnected ? 'Notion Connected' : isConnecting ? <CircularProgress size={20} /> : 'Connect to Hubspot'}
+                    {isConnected ? 'Hubspot Connected' : isConnecting ? <CircularProgress size={20} /> : 'Connect to Hubspot'}
                 </Button>
             </Box>
         </Box>

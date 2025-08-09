@@ -22,8 +22,7 @@ export const DataForm = ({ integrationType, credentials }) => {
             formData.append('credentials', JSON.stringify(credentials));
             const response = await axios.post(`http://localhost:8000/integrations/${endpoint}/load`, formData);
             const data = response.data;
-             console.log('response:',response);
-            console.log('data:',data);
+            console.log('Contacts_List:',data);
             setLoadedData(data);
         } catch (e) {
             alert(e?.response?.data?.detail);
@@ -35,8 +34,10 @@ export const DataForm = ({ integrationType, credentials }) => {
             <Box display='flex' flexDirection='column' width='100%'>
                 <TextField
                     label="Loaded Data"
-                    value={loadedData || ''}
-                    sx={{mt: 2}}
+                    value={loadedData ? JSON.stringify(loadedData, null, 2) : ''}
+                    multiline
+                    maxRows={20}
+                     sx={{ width: '100%' }}
                     InputLabelProps={{ shrink: true }}
                     disabled
                 />
