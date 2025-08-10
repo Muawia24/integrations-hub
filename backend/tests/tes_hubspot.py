@@ -1,13 +1,11 @@
 import json
 import pytest
-import respx
-from httpx import Response
+from unittest.mock import AsyncMock, Mock, patch
 from integrations.hubspot import get_items_hubspot, create_integration_item_metadata_object
 from integrations.integration_item import IntegrationItem
 
 
 @pytest.mark.asyncio
-@respx.mock
 async def test_get_items_hubspot_success():
     # Mock credentials
     credentials = json.dumps({"access_token": "fake_token"})
@@ -28,11 +26,14 @@ async def test_get_items_hubspot_success():
         ]
     }
 
-    respx.get("https://api.hubapi.com/crm/v3/objects/contacts").mock(
-        return_value=Response(200, json=mock_data)
-    )
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_data
 
-    items = await get_items_hubspot(credentials)
+    async_mock_get = AsyncMock(return_value=mock_response)
+    with patch("httpx.AsyncClient.get", async_mock_get):
+        items = await get_items_hubspot(credentials)
+
     assert len(items) == 1
     assert isinstance(items[0], IntegrationItem)
     assert items[0].name == "Ahmed Muawia"

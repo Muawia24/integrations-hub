@@ -125,7 +125,7 @@ async def get_hubspot_credentials(user_id: str, org_id: str) -> dict:
     return credentials
 
 
-async def create_integration_item_metadata_object(response_json: str) -> IntegrationItem:
+def create_integration_item_metadata_object(response_json: str) -> IntegrationItem:
     """
     Converts a HubSpot contact JSON into an IntegrationItem.
     Matches fields seen in the UI: Name, Email, Job Title, Created, Modified.
@@ -177,7 +177,7 @@ async def get_items_hubspot(credentials: dict) -> List[IntegrationItem] :
     metadata_objects = []
 
     for item in items:
-        metadata_obj = await create_integration_item_metadata_object(item)
+        metadata_obj = create_integration_item_metadata_object(item)
         metadata_objects.append(metadata_obj)
 
     return metadata_objects
