@@ -1,5 +1,3 @@
-# airtable.py
-
 import datetime
 import json
 import secrets
